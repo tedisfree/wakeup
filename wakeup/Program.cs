@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using wakeup.Properties;
 
+
 namespace wakeup
 {
     static class Program
@@ -32,6 +33,9 @@ namespace wakeup
     {
         [DllImport("user32.dll")]
         static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, int dwExtraInfo);
+        
+        [DllImport("user32.dll")]
+        private static extern bool SystemParametersInfo(int uAction, int uParam, ref int lpvParam, int flags);
 
         private NotifyIcon trayIcon;
 
@@ -49,6 +53,17 @@ namespace wakeup
 
             trayIcon.MouseDoubleClick += trayIconMouseDoubleClickEventHandler;
             run();
+        }
+
+        private void Exit(object sender, EventArgs e)
+        {
+            trayIcon.Visible = false;
+            Application.Exit();
+        }
+
+        private void trayIconMouseDoubleClickEventHandler(object sender, MouseEventArgs e)
+        {
+            Debug.WriteLine("double clicked!");
         }
 
         private void run()
@@ -73,18 +88,25 @@ namespace wakeup
             }
         }
 
+        private int getSome()
+        {
+            int en = 0;
+            SystemParametersInfo(16, 0, ref en, 0);
+            return en;
+        }
 
         private void exeStateNotifier()
         {
             while (true)
-            {
-                Debug.WriteLine("wakeup!");
+            { 
+
+                Debug.WriteLine("wakeup! screen saver info="+ getSome());
                 NativeMethods.SetThreadExecutionState(EXECUTION_STATE.ES_DISPLAY_REQUIRED);
                 Thread.Sleep(5000);
             }
-
-
         }
+            
+
         public enum EXECUTION_STATE : uint
         {
             ES_AWAYMODE_REQUIRED = 0x00000040,
@@ -92,23 +114,12 @@ namespace wakeup
             ES_DISPLAY_REQUIRED = 0x00000002,
         }
 
-
         internal class NativeMethods
         {
             [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
             public static extern EXECUTION_STATE SetThreadExecutionState(EXECUTION_STATE esFlags);
         }
 
-        private void trayIconMouseDoubleClickEventHandler(object sender, EventArgs e)
-        {
-            Debug.WriteLine("double clicked!");
-        }
-
-        private void Exit(object sender, EventArgs e)
-        {
-            trayIcon.Visible = false;
-            Application.Exit();
-        }
 
     }
 }
