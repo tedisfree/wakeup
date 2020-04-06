@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using System.Windows.Forms;
 using wakeup.Properties;
 
@@ -38,6 +39,10 @@ namespace wakeup
         private static extern bool SystemParametersInfo(int uAction, int uParam, ref int lpvParam, int flags);
 
         private NotifyIcon trayIcon;
+        private System.Timers.Timer timer;
+
+        private const int SPI_SETSCREENSAVETIMEOUT = 0x0f;
+        private const int SPI_GETSCREENSAVEACTIVE = 0x10;
 
         public MyCustormApplicationContext()
         {
@@ -55,9 +60,11 @@ namespace wakeup
             run();
         }
 
+
         private void Exit(object sender, EventArgs e)
         {
             trayIcon.Visible = false;
+            timer.Stop();
             Application.Exit();
         }
 
@@ -72,6 +79,7 @@ namespace wakeup
             new Thread(new ThreadStart(exeStateNotifier)).Start();
         }
 
+#if false 
         private void keepMoving()
         {
             while (true)
@@ -87,8 +95,15 @@ namespace wakeup
                 Thread.Sleep(5000);
             }
         }
+#endif
 
-        private int getSome()
+        private void timerHandler(object sender, ElapsedEventArgs e)
+        {
+            Debug.WriteLine("wakeup! screen saver screen-save-timeout=" + getSysParam(SPI_SETSCREENSAVETIMEOUT) + " screen-save-activate" + getSysParam(SPI_GETSCREENSAVEACTIVE));
+            NativeMethods.SetThreadExecutionState(EXECUTION_STATE.ES_DISPLAY_REQUIRED);
+        }
+
+        private int getSysParam(int param)
         {
             int en = 0;
             SystemParametersInfo(16, 0, ref en, 0);
@@ -97,13 +112,17 @@ namespace wakeup
 
         private void exeStateNotifier()
         {
-            while (true)
+            while (false)
             { 
 
-                Debug.WriteLine("wakeup! screen saver info="+ getSome());
+                Debug.WriteLine("wakeup! screen saver screen-save-timeout="+ getSysParam(SPI_SETSCREENSAVETIMEOUT)+" screen-save-activate"+getSysParam(SPI_GETSCREENSAVEACTIVE));
                 NativeMethods.SetThreadExecutionState(EXECUTION_STATE.ES_DISPLAY_REQUIRED);
                 Thread.Sleep(5000);
             }
+            timer = new System.Timers.Timer();
+            timer.Interval = 30000;
+            timer.Elapsed += timerHandler;
+            timer.Start();
         }
             
 
@@ -119,7 +138,6 @@ namespace wakeup
             [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
             public static extern EXECUTION_STATE SetThreadExecutionState(EXECUTION_STATE esFlags);
         }
-
 
     }
 }
